@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AirspaceSummary from "../../components/AirspaceSummary";
 import GulfSection from "../../components/GulfSection";
 import FlightAlerts from "../../components/FlightAlerts";
 
@@ -20,6 +21,10 @@ export default function GulfPage() {
           surrounding area. Relevant for layovers and transit.
         </p>
       </header>
+
+      <div className="mb-8">
+        <AirspaceSummary />
+      </div>
 
       <section className="mb-10">
         <h2 className="mb-4 text-lg font-semibold text-zinc-200">

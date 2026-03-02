@@ -21,4 +21,10 @@ crons.interval(
   internal.flightsIngest.pollFlightNews
 );
 
+crons.interval(
+  "generate flight status summary",
+  { minutes: 15 },
+  internal.flightsIngest.generateFlightSummary
+);
+
 export default crons;

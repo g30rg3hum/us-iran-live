@@ -35,6 +35,45 @@ export const insertAlert = internalMutation({
   },
 });
 
+export const getLatestFlightSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("flightSummaries")
+      .withIndex("by_generatedAt")
+      .order("desc")
+      .first();
+  },
+});
+
+export const recentAlertsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const alerts = await ctx.db
+      .query("flightAlerts")
+      .withIndex("by_publishedAt")
+      .order("desc")
+      .take(20);
+    return alerts.map((a) => ({
+      title: a.title,
+      summary: a.summary,
+    }));
+  },
+});
+
+export const storeFlightSummary = internalMutation({
+  args: {
+    text: v.string(),
+    generatedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("flightSummaries", {
+      text: args.text,
+      generatedAt: args.generatedAt,
+    });
+  },
+});
+
 export const recentForDedup = internalQuery({
   args: {},
   handler: async (ctx) => {

@@ -23,6 +23,11 @@ export default defineSchema({
     generatedAt: v.number(),
   }).index("by_generatedAt", ["generatedAt"]),
 
+  flightSummaries: defineTable({
+    text: v.string(),
+    generatedAt: v.number(),
+  }).index("by_generatedAt", ["generatedAt"]),
+
   flightAlerts: defineTable({
     title: v.string(),
     summary: v.string(),

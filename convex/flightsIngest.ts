@@ -2,20 +2,25 @@
 
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import Anthropic from "@anthropic-ai/sdk";
 import Parser from "rss-parser";
 
 const FLIGHT_FEEDS = [
-  {
-    name: "Reuters Travel",
-    url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best&best-type=reuters-best-travel",
-  },
   {
     name: "Al Jazeera",
     url: "https://www.aljazeera.com/xml/rss/all.xml",
   },
   {
-    name: "BBC News",
+    name: "BBC Middle East",
     url: "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
+  },
+  {
+    name: "Google News - UAE Flights",
+    url: "https://news.google.com/rss/search?q=UAE+flights+airspace+dubai+airport&hl=en-US&gl=US&ceid=US:en",
+  },
+  {
+    name: "Google News - Gulf Aviation",
+    url: "https://news.google.com/rss/search?q=gulf+aviation+airlines+middle+east+disruption&hl=en-US&gl=US&ceid=US:en",
   },
 ];
 
@@ -134,6 +139,49 @@ export const pollFlightNews = internalAction({
 
     if (ingested > 0) {
       console.log(`Ingested ${ingested} flight alerts`);
+    }
+  },
+});
+
+export const generateFlightSummary = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const alerts = await ctx.runQuery(internal.flights.recentAlertsInternal);
+
+    if (alerts.length === 0) return;
+
+    const alertList = alerts
+      .map((a, i) => `${i + 1}. ${a.title}${a.summary ? ` — ${a.summary.slice(0, 150)}` : ""}`)
+      .join("\n");
+
+    const client = new Anthropic();
+
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [
+        {
+          role: "user",
+          content: `You are an aviation status analyst. Based on these recent news headlines about flights and airspace in the Gulf/Middle East region, write a 2-3 sentence status update answering: Are flights to/through Dubai and Abu Dhabi currently running? Is airspace open or restricted? Are airlines rerouting or cancelling? Should a traveler with a layover in Abu Dhabi be concerned?
+
+Be direct and practical. If there are no major disruptions mentioned, say so clearly. If there are, explain what's affected.
+
+Recent headlines:
+${alertList}
+
+Write only the status update, no heading or preamble.`,
+        },
+      ],
+    });
+
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
+    if (text.trim()) {
+      await ctx.runMutation(internal.flights.storeFlightSummary, {
+        text: text.trim(),
+        generatedAt: Date.now(),
+      });
     }
   },
 });
